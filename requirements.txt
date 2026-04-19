@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+hydrogram
+TgCrypto
+aiosqlite
+python-multipart
+python-dotenv
+jinja2

@@ -1,0 +1,8 @@
+.env
+database.db
+__pycache__/
+*.pyc
+static/js/*.map
+telecloud_chunks/
+my_cloud_user.session
+my_cloud_bot.session
