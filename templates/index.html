@@ -153,10 +153,14 @@
         <div @click.outside="fileInfoModal.show = false" class="glass-menu w-[90%] max-w-sm rounded-[2rem] p-6 shadow-2xl animate-modal-in border border-white/20">
             
             <div class="flex items-start gap-4 mb-2">
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner shrink-0 transition-colors" :class="fileInfoModal.bgColor">
-                    <div x-html="fileInfoModal.svgIcon"></div>
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner shrink-0 transition-colors overflow-hidden relative" :class="fileInfoModal.bgColor">
+                    <template x-if="fileInfoModal.file?.has_thumb">
+                        <img :src="`/api/files/${fileInfoModal.file.id}/thumb`" class="w-full h-full object-cover absolute inset-0 z-10">
+                    </template>
+                    <template x-if="!fileInfoModal.file?.has_thumb">
+                        <div x-html="fileInfoModal.svgIcon"></div>
+                    </template>
                 </div>
-    
                 <div class="flex-1 min-w-0 pt-1">
                     <h3 class="text-lg font-bold text-slate-900 dark:text-white truncate" 
                         x-text="fileInfoModal.file?.filename" 
@@ -336,7 +340,15 @@
                                                 <i class="fa-solid fa-folder text-amber-400 text-xl md:text-2xl drop-shadow-sm"></i>
                                             </template>
                                             <template x-if="!file.is_folder">
-                                                <i class="fa-solid fa-file text-blue-500 text-lg md:text-xl drop-shadow-sm"></i>
+                                                <div class="w-full h-full relative flex items-center justify-center">
+                                                    <template x-if="file.has_thumb">
+                                                        <img :src="`/api/files/${file.id}/thumb`" loading="lazy" alt="thumb" class="w-full h-full object-cover rounded-xl shadow-sm">
+                                                    </template>
+                                                    
+                                                    <template x-if="!file.has_thumb">
+                                                        <div x-html="getFileTypeData(file.filename).i" class="scale-75 opacity-80" :class="getFileTypeData(file.filename).c.split(' ')[1]"></div>
+                                                    </template>
+                                                </div>
                                             </template>
                                         </div>
                                         <div class="truncate flex-1 cursor-pointer flex flex-col" @click="if(file.is_folder) { navigateToFolder(file.filename) } else { showFileInfo(file) }">

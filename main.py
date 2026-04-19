@@ -24,12 +24,14 @@ import hashlib
 import uuid
 import tempfile
 import mimetypes
+import subprocess
 from urllib.parse import quote
 from contextlib import asynccontextmanager
 from typing import Optional, List
+from PIL import Image
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Form, status, Query
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import APIKeyCookie
 from fastapi.staticfiles import StaticFiles
@@ -59,7 +61,7 @@ if SESSION_STRING:
     tg_app = Client("my_cloud_user", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
     startup_msg = "🚀 Khởi động với User Session (Userbot Mode)"
 elif BOT_TOKEN:
-    tg_app = Client("my_cloud_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, proxy=proxy)
+    tg_app = Client("my_cloud_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
     startup_msg = "🤖 Khởi động với Bot Token (Bot Mode)"
 else:
     raise ValueError("Bạn phải cấu hình SESSION_STRING hoặc BOT_TOKEN trong file .env")
@@ -78,17 +80,18 @@ def verify_direct_token(direct_token: str) -> str | None:
         pass
     return None
     
-# --- LOGIC XỬ LÝ BACKGROUND UPLOAD LÊN TELEGRAM ---
 async def process_complete_upload(file_path: str, filename: str, path: str, mime_type: str, task_id: str):
-    """Hàm này chạy ngầm sau khi server đã nhận đủ 100% các chunk từ client"""
     try:
         upload_tasks[task_id] = {"status": "telegram", "percent": 0}
         file_size = os.path.getsize(file_path)
+        
+        local_thumb = create_local_thumbnail(file_path, mime_type)
         
         msg = await tg_app.send_document(
             LOG_GROUP_ID, 
             document=file_path, 
             file_name=filename, 
+            thumb=local_thumb,
             caption=f"Path: {path}\nFilename: {filename}",
             progress=upload_progress_tracker,
             progress_args=(task_id,)
@@ -96,8 +99,8 @@ async def process_complete_upload(file_path: str, filename: str, path: str, mime
         
         async with aiosqlite.connect("database.db") as db:
             await db.execute(
-                "INSERT INTO files (message_id, filename, path, size, mime_type, is_folder) VALUES (?, ?, ?, ?, ?, 0)",
-                (msg.id, filename, path, file_size, mime_type)
+                "INSERT INTO files (message_id, filename, path, size, mime_type, is_folder, thumb_path) VALUES (?, ?, ?, ?, ?, 0, ?)",
+                (msg.id, filename, path, file_size, mime_type, local_thumb)
             )
             await db.commit()
             
@@ -130,6 +133,11 @@ async def lifespan(app: FastAPI):
                 is_folder BOOLEAN DEFAULT 0
             )
         """)
+        try:
+            await db.execute("ALTER TABLE files ADD COLUMN thumb_path TEXT")
+        except Exception:
+            pass
+            
         await db.commit()
     
     await tg_app.start()
@@ -137,6 +145,50 @@ async def lifespan(app: FastAPI):
     await tg_app.stop()
 
 app = FastAPI(lifespan=lifespan)
+
+THUMBS_DIR = "static/thumbs"
+os.makedirs(THUMBS_DIR, exist_ok=True)
+
+def create_local_thumbnail(source_path: str, mime_type: str) -> str | None:
+    """Tạo thumbnail local cho ảnh và video, trả về đường dẫn file thumb"""
+    
+    actual_mime = mime_type
+    if not actual_mime or actual_mime == "application/octet-stream":
+        guessed, _ = mimetypes.guess_type(source_path)
+        actual_mime = guessed or ""
+
+    thumb_name = f"{uuid.uuid4().hex}.jpg"
+    thumb_path = os.path.join(THUMBS_DIR, thumb_name)
+    
+    try:
+        if actual_mime.startswith('image/'):
+            with Image.open(source_path) as img:
+                img.thumbnail((320, 320))
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                img.save(thumb_path, "JPEG", quality=85)
+            return thumb_path
+            
+        elif actual_mime.startswith('video/'):
+            cmd = [
+                'ffmpeg', '-y', '-i', source_path,
+                '-ss', '00:00:00.000', '-vframes', '1',
+                '-vf', 'scale=320:-1', thumb_path
+            ]
+            
+            process = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if process.returncode != 0:
+                print(f"\n[!] LỖI FFMPEG KHI TẠO THUMB: {process.stderr}\n")
+                return None
+                
+            if os.path.exists(thumb_path):
+                return thumb_path
+                
+    except Exception as e:
+        print(f"\n[!] LỖI EXCEPTION TẠO THUMB: {e}\n")
+        
+    return None
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -153,7 +205,6 @@ def check_auth(token: Optional[str] = Depends(cookie_scheme)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     return token
 
-# --- ROUTES GIAO DIỆN & AUTH ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, token: Optional[str] = Depends(cookie_scheme)):
     return templates.TemplateResponse(request=request, name="index.html", context={
@@ -173,7 +224,6 @@ async def logout(response: Response):
     response.delete_cookie("session_token")
     return {"status": "success"}
 
-# --- ROUTES QUẢN LÝ THƯ MỤC & FILE ---
 upload_tasks = {}
 
 async def upload_progress_tracker(current, total, task_id):
@@ -194,6 +244,8 @@ async def list_files(path: str = "/", _=Depends(check_auth), db: aiosqlite.Conne
         file_dict = dict(row)
         if file_dict.get("share_token"):
             file_dict["direct_token"] = generate_direct_token(file_dict["share_token"])
+        
+        file_dict["has_thumb"] = True if file_dict.get("thumb_path") and os.path.exists(file_dict["thumb_path"]) else False
         result.append(file_dict)
         
     return {"files": result}
@@ -300,19 +352,27 @@ async def delete_file(file_id: int, _=Depends(check_auth), db: aiosqlite.Connect
         row = await cursor.fetchone()
         if not row: raise HTTPException(status_code=404)
     
-    if row["is_folder"]:
-        folder_full_path = f"{row['path']}/{row['filename']}" if row['path'] != "/" else f"/{row['filename']}"
+    row_dict = dict(row)
+    
+    if row_dict["is_folder"]:
+        folder_full_path = f"{row_dict['path']}/{row_dict['filename']}" if row_dict['path'] != "/" else f"/{row_dict['filename']}"
         
         async with db.execute(
-            "SELECT message_id FROM files WHERE (path = ? OR path LIKE ?) AND message_id IS NOT NULL", 
+            "SELECT message_id, thumb_path FROM files WHERE (path = ? OR path LIKE ?) AND message_id IS NOT NULL", 
             (folder_full_path, folder_full_path + "/%")
         ) as cursor:
             children = await cursor.fetchall()
         
-        target_msg_ids = list(set([child["message_id"] for child in children]))
+        target_msg_ids = list(set([child["message_id"] for child in children if child["message_id"]]))
         
         await db.execute("DELETE FROM files WHERE path = ? OR path LIKE ?", (folder_full_path, folder_full_path + "/%"))
         await db.execute("DELETE FROM files WHERE id = ?", (file_id,))
+        
+        for child in children:
+            child_dict = dict(child)
+            if child_dict.get("thumb_path") and os.path.exists(child_dict["thumb_path"]):
+                try: os.remove(child_dict["thumb_path"])
+                except Exception: pass
         
         msg_ids_to_delete_tele = []
         for msg_id in target_msg_ids:
@@ -328,13 +388,17 @@ async def delete_file(file_id: int, _=Depends(check_auth), db: aiosqlite.Connect
                 print(f"Lỗi khi xóa file folder trên Telegram: {e}")
                 
     else:
-        if row["message_id"]:
-            async with db.execute("SELECT COUNT(*) FROM files WHERE message_id = ?", (row["message_id"],)) as cursor:
+        if row_dict.get("thumb_path") and os.path.exists(row_dict["thumb_path"]):
+            try: os.remove(row_dict["thumb_path"])
+            except Exception: pass
+
+        if row_dict.get("message_id"):
+            async with db.execute("SELECT COUNT(*) FROM files WHERE message_id = ?", (row_dict["message_id"],)) as cursor:
                 count = await cursor.fetchone()
             
             if count[0] <= 1:
                 try:
-                    await tg_app.delete_messages(LOG_GROUP_ID, row["message_id"])
+                    await tg_app.delete_messages(LOG_GROUP_ID, row_dict["message_id"])
                 except Exception as e:
                     print(f"Lỗi khi xóa file đơn trên Telegram: {e}")
         
@@ -377,7 +441,7 @@ async def generate_share_link(file_id: int, _=Depends(check_auth), db: aiosqlite
     await db.commit()
     return {
         "share_token": token, 
-        "direct_token": generate_direct_token(token) # Gửi kèm mã bảo mật
+        "direct_token": generate_direct_token(token)
     }
 
 @app.delete("/api/files/{file_id}/share")
@@ -432,7 +496,7 @@ async def secure_direct_download(direct_token: str, db: aiosqlite.Connection = D
 
 @app.get("/s/{token}")
 async def public_download(request: Request, token: str, db: aiosqlite.Connection = Depends(get_db)):
-    async with db.execute("SELECT message_id, filename, mime_type, size, created_at FROM files WHERE share_token = ?", (token,)) as cursor:
+    async with db.execute("SELECT message_id, filename, mime_type, size, created_at, thumb_path FROM files WHERE share_token = ?", (token,)) as cursor:
         row = await cursor.fetchone()
         if not row: 
             return templates.TemplateResponse(
@@ -440,6 +504,8 @@ async def public_download(request: Request, token: str, db: aiosqlite.Connection
                 context={"error_message": "File không tồn tại hoặc link đã bị thu hồi."},
                 status_code=404
             )
+            
+    has_thumb = True if row["thumb_path"] and os.path.exists(row["thumb_path"]) else False
     
     return templates.TemplateResponse(
         request=request, 
@@ -449,7 +515,8 @@ async def public_download(request: Request, token: str, db: aiosqlite.Connection
             "size": row["size"],
             "mime_type": row["mime_type"],
             "created_at": row["created_at"],
-            "token": token
+            "token": token,
+            "has_thumb": has_thumb
         }
     )
     
@@ -516,31 +583,22 @@ async def stream_public_media(request: Request, token: str, db: aiosqlite.Connec
             headers=headers
         )
     
+@app.get("/api/files/{file_id}/thumb")
+async def get_internal_thumb(file_id: int, _=Depends(check_auth), db: aiosqlite.Connection = Depends(get_db)):
+    async with db.execute("SELECT thumb_path FROM files WHERE id = ?", (file_id,)) as cursor:
+        row = await cursor.fetchone()
+        if row and row["thumb_path"] and os.path.exists(row["thumb_path"]):
+            return FileResponse(row["thumb_path"])
+    raise HTTPException(status_code=404)
+
 @app.get("/s/{token}/thumb")
 async def stream_public_thumbnail(token: str, db: aiosqlite.Connection = Depends(get_db)):
-    async with db.execute("SELECT message_id FROM files WHERE share_token = ?", (token,)) as cursor:
+    async with db.execute("SELECT thumb_path FROM files WHERE share_token = ?", (token,)) as cursor:
         row = await cursor.fetchone()
-        if not row or not row["message_id"]: 
-            raise HTTPException(status_code=404)
+        if row and row["thumb_path"] and os.path.exists(row["thumb_path"]):
+            return FileResponse(row["thumb_path"])
             
-    try:
-        msg = await tg_app.get_messages(LOG_GROUP_ID, row["message_id"])
-    except Exception:
-        raise HTTPException(status_code=404)
-
-    thumb_file_id = None
-    if getattr(msg, 'video', None) and msg.video.thumbs:
-        thumb_file_id = msg.video.thumbs[0].file_id
-    elif getattr(msg, 'document', None) and msg.document.thumbs:
-        thumb_file_id = msg.document.thumbs[0].file_id
-        
-    if not thumb_file_id:
-        raise HTTPException(status_code=404, detail="Không có thumbnail")
-        
-    return StreamingResponse(
-        tg_app.stream_media(thumb_file_id), 
-        media_type="image/jpeg"
-    )
+    raise HTTPException(status_code=404, detail="Không có thumbnail")
     
 @app.post("/s/{token}/dl")
 async def process_public_download(token: str, db: aiosqlite.Connection = Depends(get_db)):

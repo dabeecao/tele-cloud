@@ -6,3 +6,4 @@ aiosqlite
 python-multipart
 python-dotenv
 jinja2
+Pillow

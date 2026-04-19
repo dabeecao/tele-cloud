@@ -241,6 +241,8 @@
             
             const streamUrl = `/s/{{ token }}/stream`;
             const thumbUrl = `/s/{{ token }}/thumb`; 
+            
+            const hasThumb = {{ 'true' if has_thumb else 'false' }};
 
             const imgExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
             const videoExts = ['mp4', 'webm', 'ogg', 'mov'];
@@ -259,9 +261,11 @@
                 isMedia = true;
             } else if (videoExts.includes(ext)) {
                 const typeAttr = mimeTypes[ext] || 'video/mp4';
+                const posterAttr = hasThumb ? `data-poster="${thumbUrl}"` : '';
+                
                 previewContainer.innerHTML = `
-                    <div class="w-full relative z-20 rounded-[1rem] overflow-hidden">
-                        <video id="tele-player" playsinline controls data-poster="${thumbUrl}">
+                    <div class="w-full relative z-20 rounded-[1rem] overflow-hidden bg-black/5">
+                        <video id="tele-player" playsinline controls preload="none" ${posterAttr}>
                             <source src="${streamUrl}" type="${typeAttr}">
                         </video>
                     </div>
@@ -270,9 +274,12 @@
                 playerTarget = '#tele-player';
             } else if (audioExts.includes(ext)) {
                 const typeAttr = mimeTypes[ext] || 'audio/mpeg';
+                const coverHtml = hasThumb ? `<img src="${thumbUrl}" class="w-48 h-48 mx-auto rounded-2xl mb-4 object-cover shadow-md">` : '';
+                
                 previewContainer.innerHTML = `
-                    <div class="w-full relative z-20 rounded-[1rem] overflow-hidden">
-                        <audio id="tele-player" controls>
+                    <div class="w-full relative z-20 rounded-[1rem] overflow-hidden p-2 sm:p-4">
+                        ${coverHtml}
+                        <audio id="tele-player" controls preload="none">
                             <source src="${streamUrl}" type="${typeAttr}">
                         </audio>
                     </div>
@@ -339,12 +346,6 @@
                             speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] }
                         });
                         
-                        const videoTag = document.getElementById('tele-player');
-                        if(videoTag && videoTag.tagName === 'VIDEO') {
-                            const imgTest = new Image();
-                            imgTest.onerror = function() { videoTag.removeAttribute('data-poster'); };
-                            imgTest.src = thumbUrl;
-                        }
                     }, 50);
                 }
             }

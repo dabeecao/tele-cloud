@@ -3,9 +3,25 @@
 **TeleCloud** là một dự án cho phép sử dụng chính dung lượng lưu trữ gần như vô tận của Telegram để lưu trữ và quản lý tệp.
 
 Dự án hỗ trợ cả **Bot** và **Userbot** *(khuyến nghị dùng Userbot để có giới hạn tốt hơn)*.
-Sử dụng các công nghệ như **hydrogram**, **FastAPI** và **SQLite** giúp hệ thống nhẹ, nhanh và dễ triển khai.
+Sử dụng các công nghệ như **Hydrogram**, **FastAPI** và **SQLite** giúp hệ thống nhẹ, nhanh và dễ triển khai.
 
 ---
+
+## 📸 Ảnh xem trước giao diện
+
+### 🖥️ Giao diện Máy tính
+| 1 | 2 |
+| :---: | :---: |
+| <img src="preview/preview.jpg" width="100%"> | <img src="preview/preview-2.jpg" width="100%"> |
+
+<br>
+
+### 📱 Giao diện Điện thoại
+| 1 | 2 | 3 |
+| :---: | :---: | :---: |
+| <img src="preview/preview-3.jpg" width="250"> | <img src="preview/preview-4.jpg" width="250"> | <img src="preview/preview-5.jpg" width="250"> |
+
+> *Giao diện được thiết kế tối ưu hóa cho mọi thiết bị (Responsive Design)*
 
 ## ✨ Tính năng
 
@@ -15,6 +31,37 @@ Sử dụng các công nghệ như **hydrogram**, **FastAPI** và **SQLite** gi�
 * ⬆️ Upload nhiều file cùng lúc
 * 📦 Upload chia nhỏ (chunk) để tránh giới hạn từ Cloudflare proxy
 * 🤖 Hỗ trợ cả Bot và Userbot
+
+---
+
+## ⚠️ Yêu cầu trước khi cài đặt
+
+### 🎞️ Cài đặt FFmpeg (bắt buộc)
+
+Dự án sử dụng **FFmpeg** để tạo thumbnail (thumb) cho video/file media.
+
+#### (Ubuntu/Debian)
+
+```bash
+sudo apt install ffmpeg
+```
+#### Alpine Linux
+
+```bash
+apk add ffmpeg
+```
+
+#### Redhat-based Linux
+
+```bash
+dnf install ffmpeg
+```
+
+#### Kiểm tra:
+
+```bash
+ffmpeg -version
+```
 
 ---
 
@@ -132,3 +179,54 @@ http://localhost:8091
 * Chunk upload giúp bypass giới hạn Cloudflare
 * SQLite giúp setup nhanh, không cần database riêng
 * Hãy khai dự án trên một tên miền có SSL (bạn có thể dùng **Cloudflare Tunnel, revert proxy,...**)
+
+---
+
+## ⚠️ Điều khoản sử dụng
+
+Dự án **TeleCloud** được phát triển nhằm mục đích **lưu trữ, quản lý và chia sẻ tệp tin hợp pháp** thông qua nền tảng Telegram.
+
+Khi sử dụng dự án này, bạn **đồng ý không sử dụng** vào các mục đích sau:
+
+- ❌ Lưu trữ, phát tán nội dung vi phạm pháp luật
+- ❌ Chia sẻ phần mềm lậu, crack, nội dung vi phạm bản quyền
+- ❌ Phát tán mã độc, virus hoặc nội dung gây hại
+- ❌ Lạm dụng hệ thống để spam, khai thác tài nguyên hoặc gây ảnh hưởng đến dịch vụ khác
+- ❌ Vi phạm điều khoản sử dụng của Telegram
+
+Chúng tôi **không chịu trách nhiệm** đối với bất kỳ nội dung nào được người dùng tải lên, lưu trữ hoặc chia sẻ thông qua hệ thống.
+
+Người dùng hoàn toàn chịu trách nhiệm cho hành vi sử dụng của mình.
+
+
+## 🛡️ Tuyên bố miễn trừ trách nhiệm
+
+Dự án được cung cấp **"nguyên trạng" (as-is)**, không có bất kỳ đảm bảo nào về:
+
+- Tính ổn định
+- Tính bảo mật
+- Khả năng phù hợp với mục đích sử dụng cụ thể
+
+Tác giả **không chịu trách nhiệm** cho bất kỳ thiệt hại nào, bao gồm nhưng không giới hạn:
+
+- Mất dữ liệu
+- Gián đoạn dịch vụ
+- Thiệt hại trực tiếp hoặc gián tiếp phát sinh từ việc sử dụng dự án
+
+
+## 🙏 Đóng góp
+
+Dự án này sử dụng thư viện:
+
+- 🧩 **Hydrogram** – Thư viện Telegram client mạnh mẽ giúp xây dựng Userbot/Bot  
+  👉 https://github.com/hydrogram/hydrogram
+
+Xin cảm ơn đội ngũ phát triển Hydrogram đã cung cấp một công cụ hữu ích cho cộng đồng.
+
+Một phần nội dung trong README này, cũng như một số đoạn mã trong dự án, có sự hỗ trợ từ Gemini AI.
+
+---
+
+## 📜 Giấy phép
+
+Dự án này được phát hành dưới giấy phép [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html).
