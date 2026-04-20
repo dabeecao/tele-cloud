@@ -50,6 +50,8 @@ SESSION_STRING = os.getenv("SESSION_STRING")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", 2048))
 SECRET_KEY = os.getenv("ADMIN_PASSWORD", "telecloud_secret").encode()
+DATABASE_PATH = os.getenv("DATABASE_PATH", "database.db")
+THUMBS_DIR = os.getenv("THUMBS_DIR", "static/thumbs")
 
 log_group_env = os.getenv("LOG_GROUP_ID")
 try:
@@ -97,7 +99,7 @@ async def process_complete_upload(file_path: str, filename: str, path: str, mime
             progress_args=(task_id,)
         )
         
-        async with aiosqlite.connect("database.db") as db:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute(
                 "INSERT INTO files (message_id, filename, path, size, mime_type, is_folder, thumb_path) VALUES (?, ?, ?, ?, ?, 0, ?)",
                 (msg.id, filename, path, file_size, mime_type, local_thumb)
@@ -119,7 +121,7 @@ async def process_complete_upload(file_path: str, filename: str, path: str, mime
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(startup_msg)
-    async with aiosqlite.connect("database.db") as db:
+    async with aiosqlite.connect(DATABASE_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS files (
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -146,7 +148,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-THUMBS_DIR = "static/thumbs"
 os.makedirs(THUMBS_DIR, exist_ok=True)
 
 def create_local_thumbnail(source_path: str, mime_type: str) -> str | None:
@@ -210,7 +211,7 @@ templates = Jinja2Templates(directory="templates")
 cookie_scheme = APIKeyCookie(name="session_token", auto_error=False)
 
 async def get_db():
-    async with aiosqlite.connect("database.db") as db:
+    async with aiosqlite.connect(DATABASE_PATH) as db:
         db.row_factory = aiosqlite.Row
         yield db
 

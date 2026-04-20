@@ -156,6 +156,67 @@ ID sẽ có dạng:
 
 ---
 
+## 🐳 Chạy bằng Docker
+
+### 1. Chuẩn bị file môi trường
+
+```bash
+cp ./env.example ./.env
+```
+
+Sau đó chỉnh lại các giá trị trong `.env` như `API_ID`, `API_HASH`, `SESSION_STRING` hoặc `BOT_TOKEN`, `LOG_GROUP_ID`, `ADMIN_PASSWORD`.
+
+### 2. Chạy bằng Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+Truy cập:
+
+```
+http://localhost:8091
+```
+
+Dữ liệu sẽ được lưu bền vững tại:
+
+* `./data/database.db`
+* `./data/thumbs/`
+
+Khi cần dừng:
+
+```bash
+docker compose down
+```
+
+### 3. Chạy bằng Docker thuần
+
+Build image:
+
+```bash
+docker build -t telecloud .
+```
+
+Chạy container:
+
+```bash
+docker run --env-file .env -p 8091:8091 telecloud
+```
+
+Nếu muốn lưu bền dữ liệu khi chạy Docker thuần, bạn có thể mount thư mục `data`:
+
+```bash
+mkdir -p data
+docker run --env-file .env \
+  -e DATABASE_PATH=/data/database.db \
+  -e THUMBS_DIR=/data/thumbs \
+  -p 8091:8091 \
+  -v "$(pwd)/data:/data" \
+  telecloud
+```
+
+---
+
 ## 🚀 Chạy dự án
 
 ```bash

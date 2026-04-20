@@ -1,0 +1,16 @@
+services:
+  telecloud:
+    build:
+      context: .
+    container_name: telecloud
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_PATH: /data/database.db
+      THUMBS_DIR: /data/thumbs
+      PORT: ${PORT:-8091}
+    ports:
+      - "${PORT:-8091}:${PORT:-8091}"
+    volumes:
+      - ./data:/data

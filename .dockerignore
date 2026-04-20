@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+database.db
+static/thumbs/
+preview/
