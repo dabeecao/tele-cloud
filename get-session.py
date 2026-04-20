@@ -25,25 +25,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-api_id = os.getenv("API_ID")
-api_hash = os.getenv("API_HASH")
-
-if not api_id or not api_hash:
-    print("❌ Thiếu API_ID hoặc API_HASH trong file .env")
-    exit(1)
-
-app = Client(
-    "telecloud",
-    api_id=int(api_id),
-    api_hash=api_hash
-)
-
 async def main():
+    api_id = os.getenv("API_ID")
+    api_hash = os.getenv("API_HASH")
+
+    if not api_id or not api_hash:
+        print("❌ Thiếu API_ID hoặc API_HASH trong file .env")
+        return
+
+    app = Client(
+        "telecloud",
+        api_id=int(api_id),
+        api_hash=api_hash,
+        in_memory=True 
+    )
+
     async with app:
-        print("\n✅ SESSION_STRING của bạn:\n")
+        print("\n✅ Đang lấy SESSION_STRING...")
         session_string = await app.export_session_string()
+        print("-" * 30)
         print(session_string)
+        print("-" * 30)
 
 if __name__ == "__main__":
-    # This runs the async function and manages the loop for you
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
