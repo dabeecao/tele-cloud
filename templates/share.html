@@ -87,7 +87,8 @@
             --plyr-menu-background: rgba(15, 23, 42, 0.9);
             --plyr-menu-color: #ffffff;
         }
-        .plyr { border-radius: 1rem; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); width: 100%; }
+        .plyr { border-radius: 1rem; overflow: visible !important; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); width: 100%; }
+        .plyr__video-wrapper { border-radius: 1rem; overflow: hidden; }
         .plyr__controls { backdrop-filter: blur(10px) !important; background: rgba(15, 23, 42, 0.6) !important; padding: 10px !important; }
         .plyr--audio .plyr__controls { border-radius: 1rem; background: rgba(15, 23, 42, 0.7) !important; }
         @media (prefers-color-scheme: light) {
@@ -264,7 +265,7 @@
                 const posterAttr = hasThumb ? `data-poster="${thumbUrl}"` : '';
                 
                 previewContainer.innerHTML = `
-                    <div class="w-full relative z-20 rounded-[1rem] overflow-hidden bg-black/5">
+                    <div class="w-full relative z-20 rounded-[1rem] bg-black/5">
                         <video id="tele-player" playsinline controls preload="none" ${posterAttr}>
                             <source src="${streamUrl}" type="${typeAttr}">
                         </video>
@@ -277,7 +278,7 @@
                 const coverHtml = hasThumb ? `<img src="${thumbUrl}" class="w-48 h-48 mx-auto rounded-2xl mb-4 object-cover shadow-md">` : '';
                 
                 previewContainer.innerHTML = `
-                    <div class="w-full relative z-20 rounded-[1rem] overflow-hidden p-2 sm:p-4">
+                    <div class="w-full relative z-20 rounded-[1rem] p-2 sm:p-4">
                         ${coverHtml}
                         <audio id="tele-player" controls preload="none">
                             <source src="${streamUrl}" type="${typeAttr}">
