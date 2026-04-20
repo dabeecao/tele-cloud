@@ -19,22 +19,31 @@
 #
 
 import os
+import asyncio
 from hydrogram import Client
 from dotenv import load_dotenv
 
 load_dotenv()
 
-api_id = int(os.getenv("API_ID"))
+api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 
 if not api_id or not api_hash:
     print("❌ Thiếu API_ID hoặc API_HASH trong file .env")
     exit(1)
 
-with Client(
+app = Client(
     "telecloud",
-    api_id=api_id,
+    api_id=int(api_id),
     api_hash=api_hash
-) as app:
-    print("\n✅ SESSION_STRING của bạn:\n")
-    print(app.export_session_string())
+)
+
+async def main():
+    async with app:
+        print("\n✅ SESSION_STRING của bạn:\n")
+        session_string = await app.export_session_string()
+        print(session_string)
+
+if __name__ == "__main__":
+    # This runs the async function and manages the loop for you
+    asyncio.run(main())
