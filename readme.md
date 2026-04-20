@@ -10,16 +10,14 @@ Sử dụng các công nghệ như **Hydrogram**, **FastAPI** và **SQLite** gi�
 ## 📸 Ảnh xem trước giao diện
 
 ### 🖥️ Giao diện Máy tính
-| 1 | 2 |
-| :---: | :---: |
-| <img src="preview/preview.jpg" width="100%"> | <img src="preview/preview-2.jpg" width="100%"> |
-
-<br>
+| | | |
+| :---: | :---: | :---: |
+| <img src="preview/preview.jpg" width="100%"> | <img src="preview/preview-2.jpg" width="100%"> | <img src="preview/preview-3.jpg" width="100%"> |
 
 ### 📱 Giao diện Điện thoại
-| 1 | 2 | 3 |
-| :---: | :---: | :---: |
-| <img src="preview/preview-3.jpg" width="250"> | <img src="preview/preview-4.jpg" width="250"> | <img src="preview/preview-5.jpg" width="250"> |
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <img src="preview/preview-4.jpg" width="100%"> | <img src="preview/preview-5.jpg" width="100%"> | <img src="preview/preview-6.jpg" width="100%"> | <img src="preview/preview-7.jpg" width="100%"> |
 
 > *Giao diện được thiết kế tối ưu hóa cho mọi thiết bị (Responsive Design)*
 
