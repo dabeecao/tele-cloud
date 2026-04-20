@@ -4,7 +4,8 @@ function cloudApp(initialIsLoggedIn, initialMaxUploadSizeMB) {
         maxUploadSizeMB: initialMaxUploadSizeMB,
         password: '', 
         isLoading: false, 
-        isRefreshing: false, 
+        isRefreshing: false,
+        isPreparingDownload: false,
         startDownload(fileId) {
             this.isPreparingDownload = true;
             
@@ -130,7 +131,8 @@ function cloudApp(initialIsLoggedIn, initialMaxUploadSizeMB) {
         },
         toastModal: { show: false, message: '', type: 'success' },
         toastTimeout: null,
-        fileInfoModal: { show: false, file: null, typeName: '', svgIcon: '', bgColor: '' },
+        plyrInstance: null,
+        fileInfoModal: { show: false, file: null, typeName: '', svgIcon: '', bgColor: '', isMedia: false, mediaHtml: '' },
         modal: { show: false, type: 'alert', title: '', message: '', input: '', resolve: null, isDanger: false },
         contextMenu: { show: false, x: 0, y: 0, file: null },
 
@@ -448,10 +450,91 @@ function cloudApp(initialIsLoggedIn, initialMaxUploadSizeMB) {
             return result || { n: 'Tệp tin (' + ext.toUpperCase() + ')', c: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400', i: '<i class="fa-solid fa-file text-2xl"></i>' };
         },
         
+        closeFileInfoModal() {
+            this.fileInfoModal.show = false;
+            if (this.plyrInstance) {
+                this.plyrInstance.destroy();
+                this.plyrInstance = null;
+            }
+            setTimeout(() => {
+                if (!this.fileInfoModal.show) {
+                    this.fileInfoModal.isMedia = false;
+                    this.fileInfoModal.mediaHtml = '';
+                }
+            }, 300);
+        },
+
         showFileInfo(file) {
             if (file.is_folder) return;
             const typeData = this.getFileTypeData(file.filename);
-            this.fileInfoModal = { show: true, file: file, typeName: typeData.n, svgIcon: typeData.i, bgColor: typeData.c };
+            
+            const ext = file.filename.split('.').pop().toLowerCase();
+            const imgExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+            const videoExts = ['mp4', 'webm', 'ogg', 'mov'];
+            const audioExts = ['mp3', 'wav', 'ogg', 'm4a', 'flac'];
+            
+            const mimeTypes = {
+                'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/mp4',
+                'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'flac': 'audio/flac', 'm4a': 'audio/mp4'
+            };
+
+            let isMedia = false;
+            let mediaHtml = '';
+            let playerTarget = null;
+            const streamUrl = `/download/${file.id}`;
+            const thumbUrl = `/api/files/${file.id}/thumb`;
+
+            if (imgExts.includes(ext)) {
+                mediaHtml = `<img src="${streamUrl}" alt="${file.filename}" class="max-h-64 object-contain rounded-[1rem] w-full shadow-md">`;
+                isMedia = true;
+            } else if (videoExts.includes(ext)) {
+                const typeAttr = mimeTypes[ext] || 'video/mp4';
+                mediaHtml = `
+                    <div class="w-full relative z-20 rounded-[1rem] bg-black/10 shadow-md">
+                        <video id="index-tele-player" playsinline controls preload="none" ${file.has_thumb ? `data-poster="${thumbUrl}"` : ''}>
+                            <source src="${streamUrl}" type="${typeAttr}">
+                        </video>
+                    </div>
+                `;
+                isMedia = true;
+                playerTarget = '#index-tele-player';
+            } else if (audioExts.includes(ext)) {
+                const typeAttr = mimeTypes[ext] || 'audio/mpeg';
+                mediaHtml = `
+                    <div class="w-full relative z-20 rounded-[1rem] p-2 sm:p-4 bg-slate-100 dark:bg-slate-800/50 shadow-inner">
+                        ${file.has_thumb ? `<img src="${thumbUrl}" class="w-32 h-32 mx-auto rounded-2xl mb-4 object-cover shadow-md">` : `<div class="w-32 h-32 mx-auto rounded-2xl mb-4 flex items-center justify-center bg-white dark:bg-slate-700 shadow-sm"><i class="fa-solid fa-music text-5xl text-slate-300 dark:text-slate-500"></i></div>`}
+                        <audio id="index-tele-player" controls preload="none">
+                            <source src="${streamUrl}" type="${typeAttr}">
+                        </audio>
+                    </div>
+                `;
+                isMedia = true;
+                playerTarget = '#index-tele-player';
+            }
+
+            this.fileInfoModal = { 
+                show: true, 
+                file: file, 
+                typeName: typeData.n, 
+                svgIcon: typeData.i, 
+                bgColor: typeData.c,
+                isMedia: isMedia,
+                mediaHtml: mediaHtml
+            };
+
+            if (playerTarget) {
+                setTimeout(() => {
+                    if (this.plyrInstance) {
+                        this.plyrInstance.destroy();
+                    }
+                    this.plyrInstance = new Plyr(playerTarget, {
+                        controls: [
+                            'play-large', 'play', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen'
+                        ],
+                        settings: ['speed']
+                    });
+                }, 50);
+            }
         },
         formatBytes(b, d=2) { if (!+b) return '0 B'; const k = 1024, i = Math.floor(Math.log(b) / Math.log(k)); return `${parseFloat((b / Math.pow(k, i)).toFixed(d))} ${['B', 'KB', 'MB', 'GB', 'TB'][i]}`; }
     }
