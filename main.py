@@ -150,7 +150,7 @@ THUMBS_DIR = "static/thumbs"
 os.makedirs(THUMBS_DIR, exist_ok=True)
 
 def create_local_thumbnail(source_path: str, mime_type: str) -> str | None:
-    """Tạo thumbnail local cho ảnh và video, trả về đường dẫn file thumb"""
+    """Tạo thumbnail local cho ảnh, video và nhạc, trả về đường dẫn file thumb"""
     
     actual_mime = mime_type
     if not actual_mime or actual_mime == "application/octet-stream":
@@ -175,15 +175,29 @@ def create_local_thumbnail(source_path: str, mime_type: str) -> str | None:
                 '-ss', '00:00:00.000', '-vframes', '1',
                 '-vf', 'scale=320:-1', thumb_path
             ]
-            
             process = subprocess.run(cmd, capture_output=True, text=True)
             
             if process.returncode != 0:
-                print(f"\n[!] LỖI FFMPEG KHI TẠO THUMB: {process.stderr}\n")
+                print(f"\n[!] LỖI FFMPEG KHI TẠO THUMB VIDEO: {process.stderr}\n")
                 return None
                 
             if os.path.exists(thumb_path):
                 return thumb_path
+                
+        elif actual_mime.startswith('audio/'):
+            cmd = [
+                'ffmpeg', '-y', '-i', source_path,
+                '-an',
+                '-vframes', '1',
+                '-vf', 'scale=320:-1',
+                thumb_path
+            ]
+            process = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if process.returncode == 0 and os.path.exists(thumb_path):
+                return thumb_path
+            else:
+                return None
                 
     except Exception as e:
         print(f"\n[!] LỖI EXCEPTION TẠO THUMB: {e}\n")
