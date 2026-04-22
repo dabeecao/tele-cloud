@@ -1,6 +1,22 @@
 # TeleCloud
 
-**TeleCloud** là một dự án cho phép sử dụng chính dung lượng lưu trữ gần như vô tận của Telegram để lưu trữ và quản lý tệp.
+## ⚠️ Project Status
+
+Dự án này đã **ngừng phát triển** và sẽ không nhận thêm bất kỳ bản cập nhật hay sửa lỗi nào trong tương lai.
+
+🚀 TeleCloud hiện đã được chuyển sang phiên bản mới viết bằng **Golang**, mang lại hiệu năng cao hơn, tối ưu tài nguyên tốt hơn và khả năng mở rộng mạnh mẽ hơn.
+
+👉 Vui lòng sử dụng phiên bản mới tại:
+https://github.com/dabeecao/telecloud-go
+
+---
+
+### 🙏 Lưu ý
+Repository này sẽ được giữ lại với mục đích tham khảo. Nếu bạn đang sử dụng phiên bản cũ, hãy cân nhắc migrate sang phiên bản Golang để có trải nghiệm tốt hơn.
+
+---
+
+TeleCloud là một dự án cho phép sử dụng chính dung lượng lưu trữ gần như vô tận của Telegram để lưu trữ và quản lý tệp.
 
 Dự án hỗ trợ cả **Bot** và **Userbot** *(khuyến nghị dùng Userbot để có giới hạn tốt hơn)*.
 Sử dụng các công nghệ như **Hydrogram**, **FastAPI** và **SQLite** giúp hệ thống nhẹ, nhanh và dễ triển khai.
